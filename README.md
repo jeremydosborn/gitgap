@@ -14,7 +14,7 @@ python gitgap.py /path/to/repo
 - **SBOM** — software bill of materials
 - **TUF** — secure distribution
 
-See [REPO_ROLES.md] for full role definitions and completeness criteria. 
+See [REPO_ROLES.md] for repo role definitions and completeness assesment criteria.
 
 Human review required to interpret role attribution and completeness after initial scan.
 
