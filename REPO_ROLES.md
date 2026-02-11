@@ -1,17 +1,33 @@
-| Role | Repo | What it does |
-|------|------|--------------|
-| Repository tool | aws/tough (includes tuftool) | Creates/manages TUF metadata (root.json, targets.json, etc.) |
-| Build system | twoliter | Signs metadata updates with KMS, adds new targets |
-| OS client | bottlerocket | updog fetches metadata, verifies signatures, applies updates |
-| Hosting | AWS S3/CDN (external) | Serves metadata + artifacts to clients |
+```markdown
+## How gitgap works
 
-So a complete audit of "does Bottlerocket have TUF" requires scanning three repos plus knowing about external infra.
+gitgap scans a single repo for signs of:
+- gittuf (source protection)
+- in-toto (build attestation)
+- SBOM (software bill of materials)
+- TUF (secure distribution)
 
-gitgap currently scans one repo at a time. It can tell you:
-- bottlerocket: uses tough (client) ✓
-- twoliter: uses tough-kms (signing) ✓
-- aws/tough: has tuftool (repo creation) ✓
+Each tool may span multiple repos. gitgap finds signals in one repo at a time. For now, human maps findings across repos to assess completeness.
 
-But it can't automatically connect them. That's manual interpretation—or future feature (scan an org, map relationships).
+### Example: TUF roles across repos
 
-For now: scan each, note findings, human draws the lines.
+| Role | What it does | Example signals |
+|------|--------------|-----------------|
+| Repository tool | Creates TUF metadata (root.json, targets.json) | tuftool, tuf-repo-create |
+| Build system | Signs metadata, adds targets | tuf-sign, kms-signer, metadata-update |
+| OS/Client | Verifies signatures, applies updates | tuf-client, update-verifier |
+| Hosting | Serves metadata + artifacts | (external infra, not in repo) |
+
+### Example: gittuf roles across repos
+
+| Role | What it does | Example signals |
+|------|--------------|-----------------|
+| Repo admin | Creates root of trust, policy | gittuf trust init, refs/gittuf/policy |
+| Policy author | Defines branch/file protections | gittuf policy add-rule, policy.json |
+| Contributor | Signs commits (GPG/SSH), records RSL | git commit -S, gittuf rsl record |
+| Verifier | Enforces policy on push | gittuf verify-ref, pre-receive hook |
+
+A complete audit requires scanning each repo and mapping roles. gitgap finds the signals—human connects the dots.
+
+Future: scan an org, map relationships automatically.
+```
