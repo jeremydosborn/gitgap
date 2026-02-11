@@ -22,7 +22,7 @@ Each tool may span multiple repos. gitgap finds signals in one repo at a time. F
 | Role | What it does | Example signals |
 |------|--------------|-----------------|
 | Repo admin | Creates root of trust, policy | gittuf trust init, refs/gittuf/policy |
-| Policy author | Defines branch/file protections | gittuf policy add-rule, policy.json |
+| Policy author | Defines branch/file protections | gittuf policy add-rule |
 | Contributor | Signs commits (GPG/SSH), records RSL | git commit -S, gittuf rsl record |
 | Verifier | Enforces policy on push | gittuf verify-ref, pre-receive hook |
 
