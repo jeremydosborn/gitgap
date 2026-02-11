@@ -1,4 +1,3 @@
-```markdown
 ## How gitgap works
 
 gitgap scans a single repo for signs of:
@@ -30,4 +29,3 @@ Each tool may span multiple repos. gitgap finds signals in one repo at a time. F
 A complete audit requires scanning each repo and mapping roles. gitgap finds the signals—human connects the dots.
 
 Future: scan an org, map relationships automatically.
-```
