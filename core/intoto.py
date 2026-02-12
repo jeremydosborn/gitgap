@@ -8,6 +8,7 @@ PATTERNS = [
     r"\bin-toto\b",
     r"\bin_toto\b",
     r"\bintoto\b",
+    r"\bsbomit\b",
 ]
 
 INDICATOR_PATHS = [".in-toto", "in-toto"]
@@ -30,12 +31,17 @@ def analyze(repo_path: Path) -> Dict[str, Any]:
     # Look for layout files
     layout_files = list(repo_path.rglob("*layout*.json"))[:5]
     for lf in layout_files:
-        result["matches"].append({
-            "file": str(lf),
-            "line": 0,
-            "pattern": "layout.json",
-            "context": "in-toto layout file",
-        })
+        try:
+            content = lf.read_text()[:500]
+            if '"_type"' in content and 'layout' in content:
+                result["matches"].append({
+                    "file": str(lf),
+                    "line": 0,
+                    "pattern": "layout.json",
+                    "context": "in-toto layout file",
+                })
+        except Exception:
+            pass
     
     result["found"] = len(result["matches"]) > 0
     return result

@@ -4,17 +4,13 @@ from pathlib import Path
 from typing import Dict, Any
 from .base import analyze_repo, check_paths_exist
 
-# Generation tools (not just format mentions)
+# SBOM format identifiers
 PATTERNS = [
-    r"\bsbom\b",
-    r"\bsyft\b",
-    r"\bsbomtool\b",
     r"cyclonedx",
     r"\bspdx\b",
 ]
 
 INDICATOR_PATHS = ["sbom", "sbom.json"]
-
 
 def analyze(repo_path: Path) -> Dict[str, Any]:
     result = analyze_repo(repo_path, PATTERNS)
@@ -26,12 +22,17 @@ def analyze(repo_path: Path) -> Dict[str, Any]:
         sbom_files.extend(list(repo_path.rglob(pattern))[:5])
     
     for sf in sbom_files:
-        result["matches"].append({
-            "file": str(sf),
-            "line": 0,
-            "pattern": "sbom_file",
-            "context": f"SBOM file: {sf.name}",
-        })
+        try:
+            content = sf.read_text()[:500]
+            if '"spdxVersion"' in content or '"bomFormat"' in content:
+                result["matches"].append({
+                    "file": str(sf),
+                    "line": 0,
+                    "pattern": "sbom_file",
+                    "context": f"SBOM file: {sf.name}",
+                })
+        except Exception:
+            pass
     
     result["found"] = len(result["matches"]) > 0
     return result

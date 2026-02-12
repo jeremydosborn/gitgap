@@ -6,11 +6,10 @@ from .base import analyze_repo, check_paths_exist
 
 PATTERNS = [
     r"\btuf\b",
-    r"\btough\b",
     r"theupdateframework",
 ]
 
-INDICATOR_PATHS = ["tuf", "repository"]
+INDICATOR_PATHS = ["tuf"]
 
 TUF_METADATA = ["root.json", "targets.json", "snapshot.json", "timestamp.json"]
 
