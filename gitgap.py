@@ -30,6 +30,11 @@ def scan_repo(repo_path: str) -> dict:
         print(f"Error: {repo_path} does not exist", file=sys.stderr)
         sys.exit(1)
     
+    scanner_dir = Path(__file__).parent.resolve()
+    if repo_path == scanner_dir:
+        print(f"Error: Cannot scan the scanner itself", file=sys.stderr)
+        sys.exit(1)
+    
     project_name = repo_path.name
     
     results = {
