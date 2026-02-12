@@ -7,12 +7,10 @@ Scans repositories for signs of:
 - SBOM (software bill of materials)
 - TUF (secure distribution)
 
-See REPO_ROLES.md for separation of concerns.
-Human review required to interpret repo separation of concerns, and completeness of implementation.
+Human review required to interpret.
 
 Usage:
     python scan.py /path/to/repo
-    python scan.py /path/to/repo -o results.json
 """
 
 import argparse
@@ -98,7 +96,6 @@ def print_results(results: dict):
 def main():
     parser = argparse.ArgumentParser(description="Scan repo")
     parser.add_argument("repo", help="Path to repository")
-    parser.add_argument("-o", "--output", help="Output JSON file")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress output")
     
     args = parser.parse_args()
