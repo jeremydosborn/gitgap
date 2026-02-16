@@ -7,7 +7,6 @@ from .base import analyze_repo, check_paths_exist
 PATTERNS = [
     r"\bin-toto\b",
     r"\bin_toto\b",
-    r"\bintoto\b",
     r"\bsbomit\b",
 ]
 
@@ -21,12 +20,17 @@ def analyze(repo_path: Path) -> Dict[str, Any]:
     # Look for .link files
     link_files = list(repo_path.rglob("*.link"))[:10]
     for lf in link_files:
-        result["matches"].append({
-            "file": str(lf),
-            "line": 0,
-            "pattern": "*.link",
-            "context": "in-toto link file",
-        })
+        try:
+            content = lf.read_text()[:500]
+            if '"_type"' in content and '"link"' in content:
+                result["matches"].append({
+                    "file": str(lf),
+                    "line": 0,
+                    "pattern": "*.link",
+                    "context": "in-toto link file",
+                })
+        except Exception:
+            pass
     
     # Look for layout files
     layout_files = list(repo_path.rglob("*layout*.json"))[:5]
