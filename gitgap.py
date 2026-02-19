@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Jeremy D. Osborn
+
 """
 gitgap - Config-driven repo scanner with anonymous research survey.
 

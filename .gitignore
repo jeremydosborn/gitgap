@@ -1,5 +1,17 @@
+# Mac system files
 .DS_Store
+
+# Python cache and byte-code
 __pycache__/
 *.pyc
+
+# Distribution/Archive files
 *.tar.gz
+
+# Local research results
 results/
+
+# Virtual Environments
+venv/
+env/
+.env

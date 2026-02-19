@@ -1,4 +1,8 @@
 # configs/tufcheck.yaml
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Jeremy D. Osborn
+
 name: "Supply Chain Security"
 version: 1
 

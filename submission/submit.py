@@ -1,5 +1,9 @@
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Jeremy D. Osborn
+
 """
-Bundle survey responses for secure transmission.
+Distribute and manage survey response shares.
 
 Security architecture:
 1. Payload contains ONLY: version + response score (no identifying info)

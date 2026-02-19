@@ -84,7 +84,7 @@ python3 gitgap-admin.py tokens emails.txt > tokens.csv
 python3 gitgap-admin.py status
 
 # Aggregate after survey closes
-python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/survey/private.key
+python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/submission/private.key
 
 # Permanently close survey (optional)
 python3 gitgap-admin.py destroy-key
@@ -105,7 +105,7 @@ python3 gitgap.py /path/to/repo \
 ```bash
 python3 gitgap-admin.py init
 python3 gitgap.py /path/to/repo --config tufcheck --no-token
-python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/survey/private.key
+python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/submission/private.key
 ```
 
 ## Configs
@@ -154,7 +154,7 @@ gitgap/
 ├── gitgap-admin.py     # admin CLI
 ├── configs/
 │   └── tufcheck.yaml   # supply chain security scan
-└── survey/
+└── submission/
     ├── bundle.py       # age encryption + Shamir splitting
     └── submit.py       # endpoint submission (local/remote)
 ```
@@ -173,4 +173,4 @@ The public key encrypts the response. The unique ID deduplicates submissions.
 
 ## License
 
-TBD
+This project is licensed under the **Apache License 2.0**. See the LICENSE AND CONTRIBUTING files for details.
