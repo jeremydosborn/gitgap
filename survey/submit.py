@@ -1,101 +1,197 @@
 """
-Submit encrypted survey shares to research infrastructure.
+Bundle survey responses for secure transmission.
 
-CURRENT STATUS: STUB IMPLEMENTATION
-Saves shares locally for testing. Real submission not yet implemented.
-
-=============================================================================
-SECURITY ARCHITECTURE (planned)
-=============================================================================
-
-Submission flow:
-  1. Client encrypts payload with research public key
-  2. Client splits encrypted blob into 3 Shamir shares (2-of-3 threshold)
-  3. Each share POSTed to different infrastructure provider:
-     - Shard 1 -> Digital Ocean
-     - Shard 2 -> Linode  
-     - Shard 3 -> Vultr (or similar)
-  4. No single provider can reconstruct the submission
-  5. Attacker must compromise 2+ providers AND obtain private key
-
-Aggregation flow:
-  1. Research team pulls shares from all providers
-  2. Reconstructs encrypted blobs (need 2-of-3 shares)
-  3. Decrypts with private key (stored on hardware key / HSM)
-  4. Aggregates responses, publishes only aggregate statistics
-  5. Deletes individual submissions after aggregation
-
-=============================================================================
-UNSOLVED PROBLEMS (TODO)
-=============================================================================
-
-1. HOSTILE RESPONDER MITIGATION
-   - No mechanism to prevent spam/flooding
-   - No mechanism to prevent slow trickle of fake data
-   - Rate limiting by IP is insufficient (botnets)
-   - Proof of work adds friction but doesn't stop determined attacker
-   - Authentication would compromise anonymity
-   
-   Current stance: Accept the risk for v1. Monitor for anomalies.
-   Revisit if tufcheck adoption makes it a worthwhile target.
-
-2. SYBIL RESISTANCE  
-   - Same person could submit multiple times
-   - Client-side cache is trivially bypassed
-   - Server can't dedupe without identifying info
-   
-   Current stance: Noise averages out at scale. Not a high-integrity vote.
-
-3. LONGITUDINAL TRACKING
-   - No repo hash means no cross-time correlation
-   - Deliberately sacrificed for anonymity
-   - Can only measure cohort trends, not individual project evolution
-
-=============================================================================
+Security architecture:
+1. Payload contains ONLY: version + response score (no identifying info)
+2. Padded to fixed size (prevents length fingerprinting)
+3. Encrypted with research team's public key (age)
+4. Split into shares via Shamir secret sharing (2-of-3 threshold)
+5. Each share destined for different infrastructure provider
 """
 
 from pathlib import Path
 from datetime import datetime
+from typing import List, Tuple, Optional
+import urllib.request
+import urllib.error
 
+# Base directory for local survey data
+SURVEY_DIR = Path.home() / ".gitgap-survey"
 
-SHARD_ENDPOINTS = [
-    "https://shard1.tufcheck.dev/submit",
-    "https://shard2.tufcheck.dev/submit",
-    "https://shard3.tufcheck.dev/submit",
+# Local endpoint names (would be real URLs in production)
+ENDPOINT_NAMES = [
+    "shard1.gitgap.dev",
+    "shard2.gitgap.dev",
+    "shard3.gitgap.dev",
 ]
 
 
-def submit_shares(shares: list[bytes]) -> bool:
-    pending_dir = Path.home() / ".tufcheck" / "pending"
-    pending_dir.mkdir(parents=True, exist_ok=True)
+def submit_shares(shares: List[Tuple[int, bytes]], submission_id: str, endpoints: Optional[List[str]] = None) -> bool:
+    """
+    Submit shares to endpoints (or save locally if no endpoints).
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    Args:
+        shares: List of (shard_index, share_bytes) tuples
+        submission_id: Unique ID for deduplication
+        endpoints: List of endpoint URLs, or None for local mode
+        
+    Returns:
+        True if all shares submitted successfully
+    """
+    if endpoints is None:
+        return submit_shares_local(shares, submission_id)
+    else:
+        return submit_shares_remote(shares, submission_id, endpoints)
+
+
+def submit_shares_local(shares: List[Tuple[int, bytes]], submission_id: str) -> bool:
+    """Save shares to local endpoint folders."""
+    
+    endpoints_dir = SURVEY_DIR / "endpoints"
+    for endpoint in ENDPOINT_NAMES:
+        (endpoints_dir / endpoint).mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    short_id = submission_id[:12]
     
     print("\n" + "-" * 60)
-    print("SUBMISSION (STUB MODE)")
+    print("SUBMITTING SHARES (local mode)")
     print("-" * 60)
+    
+    saved = []
+    for shard_idx, share_data in shares:
+        if shard_idx > len(ENDPOINT_NAMES):
+            print(f"  ✗ No endpoint for shard {shard_idx}")
+            continue
+            
+        endpoint_name = ENDPOINT_NAMES[shard_idx - 1]
+        endpoint_dir = endpoints_dir / endpoint_name
+        
+        filename = f"{timestamp}_{short_id}_shard{shard_idx}.enc"
+        filepath = endpoint_dir / filename
+        
+        with open(filepath, "wb") as f:
+            f.write(submission_id.encode() + b"\n")
+            f.write(share_data)
+        
+        saved.append(filepath)
+        print(f"  ✓ Shard {shard_idx} → {endpoint_name}/")
+    
+    print(f"\nShares saved to: {endpoints_dir}")
     print("""
-NOTE: Real submission infrastructure not yet implemented.
-Shares saved locally for testing.
+Architecture:
+  • 3 shares on independent "endpoints" (local folders for demo)
+  • 2-of-3 threshold for reconstruction
+  • Submission ID for deduplication (keeps first only)
+  • Use --endpoint for real HTTPS endpoints
+""")
+    
+    return len(saved) == len(shares)
 
-Planned architecture:
-  - 3 shares distributed across independent providers
-  - 2-of-3 threshold for reconstruction
-  - No single point of compromise
-""")
+
+def submit_shares_remote(shares: List[Tuple[int, bytes]], submission_id: str, endpoints: List[str]) -> bool:
+    """POST shares to remote HTTPS endpoints."""
     
-    for i, share in enumerate(shares):
-        share_path = pending_dir / f"{timestamp}_shard_{i}.enc"
-        share_path.write_bytes(share)
-        print(f"  Saved: {share_path}")
+    print("\n" + "-" * 60)
+    print("SUBMITTING SHARES (remote)")
+    print("-" * 60)
     
-    print(f"""
-When submission is implemented, shares will go to:
-  - {SHARD_ENDPOINTS[0]}
-  - {SHARD_ENDPOINTS[1]}
-  - {SHARD_ENDPOINTS[2]}
-""")
+    success_count = 0
     
-    print("Thank you for participating in this research.\n")
+    for shard_idx, share_data in shares:
+        if shard_idx > len(endpoints):
+            print(f"  ✗ No endpoint for shard {shard_idx}")
+            continue
+        
+        endpoint = endpoints[shard_idx - 1]
+        url = f"https://{endpoint}/submit"
+        
+        # Build payload with submission_id header
+        payload = submission_id.encode() + b"\n" + share_data
+        
+        try:
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "X-Submission-ID": submission_id,
+                },
+                method="POST"
+            )
+            urllib.request.urlopen(req, timeout=30)
+            print(f"  ✓ Shard {shard_idx} → {endpoint}")
+            success_count += 1
+        except urllib.error.URLError as e:
+            print(f"  ✗ Shard {shard_idx} → {endpoint}: {e.reason}")
+        except Exception as e:
+            print(f"  ✗ Shard {shard_idx} → {endpoint}: {e}")
     
-    return True
+    print(f"\nSubmitted {success_count}/{len(shares)} shares")
+    
+    # Success if at least threshold (2) shares submitted
+    return success_count >= 2
+
+
+def list_pending_submissions(endpoint_names: Optional[List[str]] = None) -> dict:
+    """
+    List all submissions across local endpoints, grouped by submission_id.
+    
+    Returns:
+        Dict mapping submission_id to list of shard info dicts
+    """
+    if endpoint_names is None:
+        endpoint_names = ENDPOINT_NAMES
+    
+    endpoints_dir = SURVEY_DIR / "endpoints"
+    submissions = {}
+    
+    for endpoint_name in endpoint_names:
+        endpoint_dir = endpoints_dir / endpoint_name
+        if not endpoint_dir.exists():
+            continue
+            
+        for filepath in endpoint_dir.glob("*.enc"):
+            try:
+                with open(filepath, "rb") as f:
+                    submission_id = f.readline().decode().strip()
+                
+                parts = filepath.stem.split("_")
+                timestamp = "_".join(parts[:3])
+                
+                if submission_id not in submissions:
+                    submissions[submission_id] = []
+                
+                submissions[submission_id].append({
+                    "endpoint": endpoint_name,
+                    "filepath": filepath,
+                    "timestamp": timestamp,
+                    "shard_idx": int(parts[-1].replace("shard", "")),
+                })
+                
+            except Exception as e:
+                print(f"Warning: Could not read {filepath}: {e}")
+    
+    return submissions
+
+
+def load_share(filepath: Path) -> Tuple[int, bytes]:
+    """Load a share from file."""
+    with open(filepath, "rb") as f:
+        f.readline()  # Skip submission_id header
+        share_data = f.read()
+    
+    shard_idx = int(filepath.stem.split("_")[-1].replace("shard", ""))
+    return (shard_idx, share_data)
+
+
+def delete_shares(filepaths: List[Path]) -> int:
+    """Delete share files."""
+    deleted = 0
+    for fp in filepaths:
+        try:
+            fp.unlink()
+            deleted += 1
+        except Exception as e:
+            print(f"Warning: Could not delete {fp}: {e}")
+    return deleted

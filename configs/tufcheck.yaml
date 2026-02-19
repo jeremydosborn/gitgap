@@ -1,0 +1,69 @@
+# configs/tufcheck.yaml
+name: "Supply Chain Security"
+version: 1
+
+question:
+  text: |
+    This scan checked for: TUF, in-toto, SBOM, and gittuf.
+    
+    Compared to what's publicly visible in this repo, how complete is
+    your organization's INTERNAL implementation of these mechanisms?
+  options:
+    1: "Much less complete than public"
+    2: "Somewhat less complete"
+    3: "About the same"
+    4: "Somewhat more complete"
+    5: "Much more complete"
+    0: "Prefer not to answer"
+
+scanners:
+  gittuf:
+    name: "gittuf"
+    description: "Source repository protection"
+    patterns:
+      - '\bgittuf\b'
+    paths:
+      - ".gittuf"
+      - ".git/refs/gittuf"
+
+  intoto:
+    name: "in-toto"
+    description: "Build attestation"
+    patterns:
+      - '\bin-toto\b'
+      - '\bin_toto\b'
+      - '\bsbomit\b'
+    paths:
+      - ".in-toto"
+      - "in-toto"
+    files:
+      - "*.link"
+      - "*layout*.json"
+
+  sbom:
+    name: "SBOM"
+    description: "Software Bill of Materials"
+    patterns:
+      - 'cyclonedx'
+      - '\bspdx\b'
+    paths:
+      - "sbom"
+      - "sbom.json"
+    files:
+      - "*sbom*.json"
+      - "*cyclonedx*.json"
+      - "*spdx*.json"
+
+  tuf:
+    name: "TUF"
+    description: "Secure distribution"
+    patterns:
+      - '\btuf\b'
+      - 'theupdateframework'
+    paths:
+      - "tuf"
+    files:
+      - "root.json"
+      - "targets.json"
+      - "snapshot.json"
+      - "timestamp.json"

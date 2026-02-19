@@ -1,26 +1,176 @@
-# gitgap
+# GitGap
 
-Scans repositories for supply chain security tooling:
+Config-driven repo scanner with anonymous research survey using threshold cryptography.
 
-- **gittuf** — source protection
-- **in-toto** — build attestation
-- **SBOM** — software bill of materials
-- **TUF** — secure distribution
+## What it does
+
+Scans repositories for patterns defined in YAML configs, then optionally collects anonymous survey responses about the results.
+
+## Security Properties
+
+| Attack | Result |
+|--------|--------|
+| Compromise 1 endpoint | Useless (need 2 of 3) |
+| Compromise 2 endpoints | Still encrypted (need private key) |
+| Compromise 2 endpoints + private key | Get responses, but no attribution |
+| Steal tokens | Can submit on behalf of others (dedupe keeps first) |
+| Flood with garbage | Decryption fails, discarded |
+
+Shamir secret sharing is information-theoretically secure (quantum-safe). Individual shares reveal nothing.
+
+## Flow
+
+```
+ADMIN                                    PARTICIPANT
+─────                                    ───────────
+gitgap-admin init                        
+  → generates keypair + salt             
+
+gitgap-admin tokens emails.txt           
+  → outputs: publickey.uniqueid tokens
+  → share tokens/usage via secure channel
+                                         pip install gitgap
+                                         gitgap scan /repo \
+                                           --config tufcheck \
+                                           --token <token> \
+                                           --endpoint shard1.survey.com
+                                         
+                                           → scans repo (patterns from yaml)
+                                           → asks one question
+                                           → encrypts response (age)
+                                           → splits into 3 shares (Shamir 2-of-3)
+                                           → POSTs to 3 endpoints
+
+gitgap-admin aggregate --key private.key
+  → logs counts (before decrypt)
+  → dedupes by submission ID (keeps first)
+  → reconstructs shares (2 of 3)
+  → decrypts with private key
+  → outputs aggregates only
+  → deletes individual shares
+```
+
+## Installation
+
+```bash
+# Clone
+git clone https://github.com/youruser/gitgap
+cd gitgap
+
+# Setup
+python3 -m venv venv
+source venv/bin/activate
+pip install pyyaml
+
+# Install age (for encryption)
+brew install age    # macOS
+apt install age     # Debian/Ubuntu
+```
 
 ## Usage
+
+### Admin: Run a Survey
+
 ```bash
-python3 gitgap.py /path/to/repo
+# Initialize survey (generates keypair)
+python3 gitgap-admin.py init
+
+# Generate tokens for participants
+python3 gitgap-admin.py tokens emails.txt > tokens.csv
+
+# Share tokens via secure channel (email, Signal, etc.) or use locals in dev
+
+# Check status
+python3 gitgap-admin.py status
+
+# Aggregate after survey closes
+python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/survey/private.key
+
+# Permanently close survey (optional)
+python3 gitgap-admin.py destroy-key
 ```
 
-Results saved to `results/<timestamp>/<project>.json`
+### Participant: Respond to Survey
 
-## Output
-```
-SCORE: 2/4
-  gittuf:  No
-  in-toto: No
-  SBOM:    Yes
-  TUF:     Yes
+```bash
+# Scan repo and respond
+python3 gitgap.py /path/to/repo \
+  --config tufcheck \
+  --token <your-token> \
+  --endpoint shard1.survey.com
 ```
 
-Human review required to interpret findings.
+### Local Testing (No Token)
+
+```bash
+python3 gitgap-admin.py init
+python3 gitgap.py /path/to/repo --config tufcheck --no-token
+python3 gitgap-admin.py aggregate --key ~/.gitgap-admin/survey/private.key
+```
+
+## Configs
+
+Scan patterns are defined in YAML:
+
+```yaml
+# configs/tufcheck.yaml
+name: "Supply Chain Security"
+version: 1
+
+question:
+  text: |
+    Compared to what's publicly visible, how complete is
+    your organization's INTERNAL implementation?
+  options:
+    1: "Much less complete"
+    2: "Somewhat less"
+    3: "About the same"
+    4: "Somewhat more"
+    5: "Much more complete"
+    0: "Prefer not to answer"
+
+scanners:
+  tuf:
+    name: "TUF"
+    patterns:
+      - '\btuf\b'
+    paths:
+      - "tuf"
+    files:
+      - "root.json"
+```
+
+List available configs:
+
+```bash
+python3 gitgap.py --list-configs
+```
+
+## Architecture
+
+```
+gitgap/
+├── gitgap.py           # scanner + survey client
+├── gitgap-admin.py     # admin CLI
+├── configs/
+│   └── tufcheck.yaml   # supply chain security scan
+└── survey/
+    ├── bundle.py       # age encryption + Shamir splitting
+    └── submit.py       # endpoint submission (local/remote)
+```
+
+## Token Format
+
+Tokens are self-contained:
+
+```
+age1xxxxxxxxxx...xxxxx.abc123def456
+└─────────────────────┘ └──────────┘
+      public key         unique id
+```
+
+The public key encrypts the response. The unique ID deduplicates submissions.
+
+## License
+
+TBD
