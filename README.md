@@ -1,6 +1,8 @@
 # GitGap
 
-Config-driven repo scanner with anonymous research survey using threshold cryptography. WIP.
+Config-driven repo scanner with anonymous research survey using threshold cryptography.
+
+**Status:** Early/WIP. The end-to-end pipeline works, but the anonymity and threat model are still being validated. The Shamir threshold-splitting layer is experimental and may change.
 
 ## What it does
 
