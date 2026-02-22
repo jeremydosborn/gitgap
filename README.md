@@ -18,7 +18,7 @@ Scans repositories for patterns defined in YAML configs, then optionally collect
 | Steal tokens | Can submit on behalf of others (dedupe keeps first) |
 | Flood with garbage | Rate-limited by endpoint; garbage fails decryption and is discarded |
 
-Shamir secret sharing is information-theoretically secure (quantum-safe). Individual shares reveal nothing.
+Shamir’s secret-sharing scheme provides information-theoretic confidentiality for the split secret (individual shares reveal nothing about the secret), assuming correct implementation and fresh randomness.
 
 ## Flow
 
