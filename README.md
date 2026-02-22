@@ -1,6 +1,6 @@
 # GitGap
 
-Config-driven repo scanner with anonymous research survey using threshold cryptography.
+Config-driven repo scanner with anonymous research survey using threshold cryptography. WIP.
 
 ## What it does
 
