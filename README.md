@@ -2,8 +2,6 @@
 
 Config-driven repo scanner with anonymous research survey using threshold cryptography.
 
-**Status:** Early/WIP. The end-to-end pipeline works, but the anonymity and threat model are still being validated. The Shamir threshold-splitting layer is experimental and may change.
-
 ## What it does
 
 Scans repositories for patterns defined in YAML configs, then optionally collects an anonymous survey response about those results. Survey responses are encrypted with age and split using Shamir's Secret Sharing, distributing shares across multiple endpoints.
