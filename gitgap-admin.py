@@ -144,41 +144,37 @@ Next steps:
 
 
 def cmd_tokens(args):
-    """Generate tokens for a list of emails."""
-    
-    # Load salt
-    salt_path = SURVEY_DIR / "token.salt"
-    if not salt_path.exists():
-        print("Error: Survey not initialized. Run 'gitgap-admin init' first.", file=sys.stderr)
-        return 1
-    
-    salt = salt_path.read_text().strip()
-    
+    """Generate anonymous tokens."""
+
     # Load public key
     public_key_path = SURVEY_DIR / "public.key"
     if not public_key_path.exists():
         print("Error: Public key not found. Run 'gitgap-admin init' first.", file=sys.stderr)
         return 1
-    
+
     public_key = public_key_path.read_text().strip()
-    
-    # Read emails
-    emails_file = Path(args.emails)
-    if not emails_file.exists():
-        print(f"Error: {emails_file} not found", file=sys.stderr)
+
+    # Load salt
+    salt_path = SURVEY_DIR / "token.salt"
+    if not salt_path.exists():
+        print("Error: Token salt not found. Run 'gitgap-admin init' first.", file=sys.stderr)
         return 1
-    
-    emails = [line.strip() for line in emails_file.read_text().splitlines() if line.strip()]
-    
-    # Generate tokens: publickey.uniqueid
+
+    salt = salt_path.read_text().strip()
+
     writer = csv.writer(sys.stdout)
-    writer.writerow(["email", "token"])
-    
-    for email in emails:
-        unique_id = hmac.new(salt.encode(), email.lower().encode(), hashlib.sha256).hexdigest()[:32]
-        token = f"{public_key}.{unique_id}"
-        writer.writerow([email, token])
-    
+    writer.writerow(["token"])
+
+    for _ in range(args.count):
+        # Generate 256 bits of entropy
+        unique_id = secrets.token_hex(32)
+
+        submission_id = hmac.new(salt.encode(), unique_id.encode(), hashlib.sha256).hexdigest()
+
+        # Token format: public_key.submission_id
+        token = f"{public_key}.{submission_id}"
+        writer.writerow([token])
+
     return 0
 
 
@@ -468,7 +464,7 @@ def main():
     
     # tokens
     tokens_parser = subparsers.add_parser("tokens", help="Generate tokens for participants")
-    tokens_parser.add_argument("emails", help="File with email addresses (one per line)")
+    tokens_parser.add_argument("count", type=int, help="Number of tokens to generate")
     
     # status
     status_parser = subparsers.add_parser("status", help="Show pending submissions")

@@ -26,7 +26,7 @@ ADMIN                                    PARTICIPANT
 gitgap-admin init                        
   → generates keypair + salt             
 
-gitgap-admin tokens emails.txt           
+gitgap-admin tokens <count>
   → outputs: publickey.uniqueid tokens
   → share tokens/usage via secure channel
                                          gitgap scan /repo \
@@ -75,9 +75,9 @@ apt install age     # Debian/Ubuntu
 python3 gitgap-admin.py init
 
 # Generate tokens for participants
-python3 gitgap-admin.py tokens emails.txt > tokens.csv
+python3 gitgap-admin.py tokens 50 > tokens.csv
 
-# Share tokens via secure channel (email, Signal, etc.) or use locals in dev
+# Share tokens via secure channel, or use locals in dev
 
 # Check status
 python3 gitgap-admin.py status
@@ -169,6 +169,7 @@ age1xxxxxxxxxx...xxxxx.abc123def456
 ```
 
 The public key encrypts the response. The unique ID deduplicates submissions.
+The public key encrypts the response. The unique ID deduplicates submissions 
 
 ## License
 

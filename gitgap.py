@@ -329,7 +329,7 @@ def main():
             elif args.token:
                 run_survey(args.token, args.endpoint, config)
             else:
-                print("\n✗ Survey requires --token (from your invitation email)")
+                print("\n✗ Survey requires --token")
                 print("  Or use --no-token for local testing")
 
 
