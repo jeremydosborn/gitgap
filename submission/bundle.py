@@ -13,6 +13,9 @@ Security architecture:
 
 Even if an attacker compromises one provider AND obtains the private key,
 they cannot reconstruct submissions without a second provider.
+
+Note: The Shamir secret sharing implementation is work-in-progress and subject to change. It should not be
+considered production-ready.
 """
 
 import json
