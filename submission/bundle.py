@@ -25,7 +25,6 @@ import tempfile
 from pathlib import Path
 from typing import List, Tuple
 import hashlib
-import hmac
 from itertools import combinations
 
 # Fixed payload size to prevent length fingerprinting
@@ -290,10 +289,6 @@ def prepare_submission(payload: dict, public_key: str = None) -> list:
     
     # Serialize
     json_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
-    
-    # Checksum to avoid single share compromise data loss
-    checksum = hashlib.sha256(json_bytes).digest()[:4]
-    json_bytes = checksum + json_bytes
 
     # Pad to fixed size
     padded = pad_payload(json_bytes)
@@ -325,13 +320,6 @@ def reconstruct_submission(shares: List[Tuple[int, bytes]], private_key_path: st
             encrypted = shamir_reconstruct(list(combo), threshold=2)
             padded = decrypt_age(encrypted, private_key_path)
             json_bytes = unpad_payload(padded)
-
-            checksum = json_bytes[:4]
-            json_bytes = json_bytes[4:]
-            expected = hashlib.sha256(json_bytes).digest()[:4]
-
-            if not hmac.compare_digest(checksum, expected):
-                continue
 
             return json.loads(json_bytes.decode('utf-8'))
 
