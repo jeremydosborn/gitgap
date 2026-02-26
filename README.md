@@ -1,10 +1,6 @@
 # GitGap
 
-WIP Config-driven repo scanner with anonymous research survey using threshold cryptography.
-
-## Status
-
-This is experimental software. Use at your own risk. It has not been independently audited and is not suitable for production use without further review.
+Config-driven repo scanner with anonymous research survey using threshold cryptography.
 
 ## What it does
 
