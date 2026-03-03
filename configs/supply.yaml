@@ -15,7 +15,7 @@ questions:
     options:
       a: "Cryptographic signing of release artifacts (GPG/PGP, Sigstore/Cosign, Notary v2, or similar)"
       b: "Software Bill of Materials (SBOM) generation"
-      c: "Build provenance / pipeline attestation (in-toto, SLSA, or similar)"
+      c: "Build provenance / pipeline attestation (in-toto or similar)"
       d: "Reproducible builds"
       e: "Secure distribution metadata (TUF or similar)"
       f: "Source repository policy enforcement (gittuf or similar)"
