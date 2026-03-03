@@ -1,0 +1,166 @@
+# configs/supply_chain.yaml
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Jeremy D. Osborn
+name: "Supply Chain Security"
+version: 4
+questions:
+  - text: |
+      This survey asks two questions about your organization's internal supply
+      chain security practices: which mechanisms you use, and how mature your
+      implementation is. Your answers will be used to assess the state of
+      supply chain security across open source projects. Do you commit to
+      answering honestly, to the best of your knowledge? If you cannot commit,
+      please do not continue.
+    type: single_select
+    options:
+      y: "Yes, I commit to answering honestly"
+      n: "No, I cannot commit — I will exit the survey"
+      
+  - text: |
+      Which of the following supply chain security mechanisms does your
+      organization use internally for this project? Select all that apply.
+    type: multi_select
+    options:
+      a: "Cryptographic signing of release artifacts (GPG/PGP, Sigstore/Cosign, Notary v2, or similar)"
+      b: "Software Bill of Materials (SBOM) generation"
+      c: "Build provenance / pipeline attestation (in-toto, SLSA, or similar)"
+      d: "Reproducible builds"
+      e: "Secure distribution metadata (TUF or similar)"
+      f: "Source repository policy enforcement (gittuf or similar)"
+      z: "None of the above"
+      0: "Prefer not to answer"
+
+  - text: |
+      For the mechanisms you selected, how would you rate the maturity of your
+      organization's internal implementation? Maturity means complete
+      implementation, applied consistently, and aligned with current best
+      practices as you understand them.
+    type: likert
+    options:
+      1: "Not mature"
+      2: "Somewhat mature"
+      3: "Moderately mature"
+      4: "Mostly mature"
+      5: "Fully mature"
+      0: "Prefer not to answer"
+
+scanners:
+  gittuf:
+    name: "gittuf"
+    description: "Source repository policy and tamper-evident audit log"
+    # gittuf policy and attestations signals may not be present depending on clone
+    # depth and platform ref fetching behavior. Check manually to avoid false negatives
+    patterns:
+      - '\bgittuf\b'
+    paths:
+      - ".gittuf"
+      - ".git/refs/gittuf"
+    refs:
+      - "refs/gittuf/policy"
+      - "refs/gittuf/attestations"
+
+  intoto:
+    name: "in-toto"
+    description: "Build pipeline attestation linking source to artifact"
+    # Artifact signals only
+    patterns:
+      - '\bin-toto\b'
+      - '\bin_toto\b'
+    paths:
+      - ".in-toto"
+      - "in-toto"
+    files:
+      - "*.link"
+      - "*layout*.json"
+      - "*.intoto.jsonl"
+
+  sbom:
+    name: "SBOM"
+    description: "Software Bill of Materials (SPDX and CycloneDX)"
+    # Artifact signals only — generation tooling (syft, trivy, cdxgen) excluded
+    patterns:
+      - 'cyclonedx'
+      - '\bspdx\b'
+    paths:
+      - "sbom"
+    files:
+      - "*sbom*.json"
+      - "*sbom*.xml"
+      - "*cyclonedx*.json"
+      - "*cyclonedx*.xml"
+      - "bom.json"
+      - "*.spdx"
+      - "*spdx*.json"
+      - "*spdx*.tv"
+      - "*spdx*.rdf"
+
+  tuf:
+    name: "TUF"
+    description: "Secure distribution (The Update Framework)"
+    # Artifact signals: canonical TUF metadata files per the TUF spec
+    patterns:
+      - '\btuf\b'
+      - 'theupdateframework'
+    paths:
+      - "tuf"
+    files:
+      - "root.json"
+      - "targets.json"
+      - "snapshot.json"
+      - "timestamp.json"
+
+  sigstore:
+    name: "Sigstore / Cosign"
+    description: "Transparency-log-backed artifact signing"
+    # CI invocation patterns assume Sigstore primitves as part of stack, not standalone
+    # Verify manually to avoid false positives
+    patterns:
+      - 'cosign\s+sign'
+      - 'cosign\s+verify'
+      - 'sigstore\.dev'
+      - 'rekor\.sigstore\.dev'
+    files:
+      - "*.sigstore.json"
+      - "cosign.bundle"
+      - "cosign.pub"
+      - "*rekor*.json"
+
+  gpg:
+    name: "GPG / PGP"
+    description: "Cryptographic signing (baseline comparison for traditional distros)"
+    # Artifact signals only: signature files and key artifacts
+    patterns:
+      - 'gpg --verify'
+      - 'gpg --import'
+    files:
+      - "*.asc"
+      - "*.gpg"
+      - "KEYS"
+      - "*.keyring"
+
+  reproducible_builds:
+    name: "Reproducible Builds"
+    description: "Deterministic build outputs enabling independent verification"
+    # SOURCE_DATE_EPOCH and BUILD_REPRODUCIBLE_BINARIES are process signals, not artifact
+    patterns:
+      - 'SOURCE_DATE_EPOCH'
+      - 'BUILD_REPRODUCIBLE_BINARIES'
+    files:
+      - "*.buildinfo"
+
+  notary:
+    name: "Notary v2 / Notation"
+    description: "OCI artifact signing using PKI (notation-action, Azure, AWS Signer)"
+    # notation sign alone doesn't confirm end-to-end enforcement. Verify manually
+    patterns:
+      - 'notation\s+sign'
+      - 'notation\s+verify'
+      - 'notation-action'
+      - '\bnotaryproject\b'
+    paths:
+      - ".github/truststore"
+      - ".github/trustpolicy"
+    files:
+      - "trustpolicy.json"
+      - "trustpolicy.oci.json"
+      - "trustpolicy.blob.json"
